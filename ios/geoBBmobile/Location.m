@@ -10,9 +10,9 @@
 #import <CoreLocation/CoreLocation.h>
 #import <CoreLocation/CLLocationManager.h>
 
-#import <React/RCTBridge.h>
+
 #import <React/RCTConvert.h>
-#import <React/RCTEventDispatcher.h>
+
 
 @interface Location() {
   NSArray *_arr;
@@ -23,24 +23,43 @@
 
 @implementation Location
 
+@synthesize bridge = _bridge;
+
 RCT_EXPORT_MODULE()
 
 - (instancetype)init
 {
   self = [super init];
-  locationManager = [[CLLocationManager alloc]init]; // inicializando locationManager
-  locationManager.delegate = self; // delegando locationManager para a classe vigente.
-  locationManager.desiredAccuracy = kCLLocationAccuracyBest;
+  
+  self.locationManager = [[CLLocationManager alloc]init]; // inicializando locationManager
+  self.locationManager.delegate = self; // delegando locationManager para a classe vigente.
+  self.locationManager.desiredAccuracy = kCLLocationAccuracyBest;
   //[locationManager requestWhenInUseAuthorization];
-  [locationManager requestAlwaysAuthorization];
+  [self.locationManager requestAlwaysAuthorization];
   
   defaults = [NSUserDefaults standardUserDefaults];
-  UIUserNotificationType types = UIUserNotificationTypeBadge | UIUserNotificationTypeSound | UIUserNotificationTypeAlert;
-  UIUserNotificationSettings *mySettings = [UIUserNotificationSettings settingsForTypes:types categories:nil];
-  [[UIApplication sharedApplication] registerUserNotificationSettings:mySettings];
+  //UIUserNotificationType types = UIUserNotificationTypeBadge | UIUserNotificationTypeSound | UIUserNotificationTypeAlert;
+  //UIUserNotificationSettings *mySettings = [UIUserNotificationSettings settingsForTypes:types categories:nil];
+  //[[UIApplication sharedApplication] registerUserNotificationSettings:mySettings];
+  
+  
+  
+  //if it is iOS 8
+//  @available(iOS: )
+  if ([UIApplication respondsToSelector:@selector(registerUserNotificationSettings:)])
+  {
+    UIUserNotificationSettings *settings = [UIUserNotificationSettings settingsForTypes:(UIUserNotificationTypeBadge|UIUserNotificationTypeAlert|UIUserNotificationTypeSound) categories:nil];
+    [[UIApplication sharedApplication] registerUserNotificationSettings:settings];
+  }
+  else // if iOS 7
+  {
+    UIRemoteNotificationType myTypes = UIRemoteNotificationTypeBadge | UIRemoteNotificationTypeAlert | UIRemoteNotificationTypeSound;
+    [[UIApplication sharedApplication] registerForRemoteNotificationTypes:myTypes];
+  }
   
   return self;
 }
+
 
 //- (void) viewDidLoad{
 //  defaults = [NSUserDefaults standardUserDefaults];
@@ -69,9 +88,14 @@ RCT_EXPORT_MODULE()
   localNotification.soundName = UILocalNotificationDefaultSoundName;
   [[UIApplication sharedApplication] scheduleLocalNotification:localNotification];
   
+  CLLocationCoordinate2D center = ((CLCircularRegion *)region).center;
+  NSString *latitude = [NSString stringWithFormat:@"%f", center.latitude];
+  NSString *longitude = [NSString stringWithFormat:@"%f", center.longitude];
   
+  NSDictionary *payload = @{@"latitude": latitude, @"longitude": longitude};
   
-  //[self.bridge.eventDispatcher sendDeviceEventWithName:@"CheckInEnter" body:@"Entrou na Geofence"];
+  [self.bridge.eventDispatcher sendDeviceEventWithName:@"mov/geo/enterLocation" body:payload];
+  
   
   //[self showLocalNotification:[NSString stringWithFormat:@"Enter Fence"] withDate:[NSDate dateWithTimeIntervalSinceNow:1]];
 }
@@ -147,7 +171,7 @@ RCT_EXPORT_METHOD(setAgencias:(NSArray *)array) { //recebendo JSON
       CLCircularRegion *geofenceRegion =[[CLCircularRegion alloc] initWithCenter:geofenceRegionCenter radius:10.0 identifier:name];
       geofenceRegion.notifyOnExit = YES;
       geofenceRegion.notifyOnEntry = YES;
-      [locationManager startMonitoringForRegion:geofenceRegion];
+      [self.locationManager startMonitoringForRegion:geofenceRegion];
     }
   }
 }
@@ -176,7 +200,7 @@ RCT_EXPORT_METHOD(setPlist){
       CLCircularRegion *geofenceRegion =[[CLCircularRegion alloc] initWithCenter:geofenceRegionCenter radius:10.0 identifier:name];
       geofenceRegion.notifyOnExit = YES;
       geofenceRegion.notifyOnEntry = YES;
-      [locationManager startMonitoringForRegion:geofenceRegion];
+      [self.locationManager startMonitoringForRegion:geofenceRegion];
     }
   }
   

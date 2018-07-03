@@ -27,11 +27,19 @@ export default class App extends Component {
       longitude: 'unknown',
       checkin: '',
       error:'',
-      status : ''
+      status : '',
     }
+
   }
 
+  
+
   componentDidMount() {
+
+    DeviceEventEmitter.addListener('mov/geo/enterLocation', (payload) => {
+      console.warn('call this')
+      console.log(payload)
+    })
     fetch('http:///192.168.0.19:8080/listaagencias')
     .then(resposta => resposta.json())  
     .then(json => {
@@ -93,7 +101,8 @@ export default class App extends Component {
     }
     //console.log(this.state.agencias[0].latitude)
     //console.log(this.state.latitude)
-
+    
+    var meters = measure;
   }
 
   atualizaCheckin(){
@@ -149,6 +158,18 @@ export default class App extends Component {
   componentWillUnmount = () => {
     navigator.geolocation.clearWatch(this.watchID);
   }
+
+ measure(lat1, lon1, lat2, lon2){  // generally used geo measurement function
+    var R = 6378.137; // Radius of earth in KM
+    var dLat = lat2 * Math.PI / 180 - lat1 * Math.PI / 180;
+    var dLon = lon2 * Math.PI / 180 - lon1 * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    var d = R * c;
+    return d * 1000; // meters
+}
 
   render() {
     return (
